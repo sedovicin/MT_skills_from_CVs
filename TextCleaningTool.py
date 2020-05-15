@@ -1,6 +1,7 @@
 import pdfminer.high_level as pdf2txt;
 from pathlib import Path;
 import os;
+import re;
 
 
 def run(file: str):
@@ -9,25 +10,34 @@ def run(file: str):
 	if (os.path.isfile(file) == False):
 		raise FileNotFoundError();
 	if (extension == '.pdf'):
-		return extractFromPDF(file);
+		uncleanedText = extractFromPDF(file);
 	elif (extension == '.docx'):
-		return extractFromDocx(file);
+		uncleanedText = extractFromDocx(file);
 	elif (extension == '.doc'):
-		return extractFromDoc(file);
+		uncleanedText = extractFromDoc(file);
 	elif (extension == '.txt'):
-		return extractFromTxt(file);
+		uncleanedText = extractFromTxt(file);
 	else:
 		raise TypeError("Unsupported file type!");
+
+	return removeUnsupportedChars(uncleanedText);
 
 
 def extractFromPDF(pdfFile):
 	return pdf2txt.extract_text(pdfFile);
 
+
 def extractFromDocx(docxFile):
 	raise Exception("Not implemented extractFromDocx");
+
 
 def extractFromDoc(docFile):
 	raise Exception("Not implemented extractFromDoc");
 
+
 def extractFromTxt(txtFile):
 	raise Exception("Not implemented extractFromTxt");
+
+
+def removeUnsupportedChars(text: str):
+	return re.sub('[^A-Za-z0-9ŠĐČĆŽšđčćž !\"#$%&/()=?*+\'\\\n\.,<>;:\-\_]', '', text);
