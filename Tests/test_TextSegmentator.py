@@ -10,7 +10,7 @@ class Test(TestCase):
 		self.assertEqual(sorted(TEST_MULTIPART_SENTENCES), sorted(ts.segment_by_punctuation(TEST_MULTIPART)))
 
 	def test_run(self):
-		self.assertEqual(sorted(TEST_LINES), sorted(ts.run(TEST_TEXT)))
+		self.assertEqual(sorted(TEST_SENTENCES), sorted(ts.run(TEST_TEXT)))
 
 
 TEST_TEXT = """This is a small test text. 

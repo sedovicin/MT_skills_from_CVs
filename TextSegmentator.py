@@ -1,3 +1,6 @@
+import nltk
+
+
 def segment_by_lines(text: str):
 	"""Segments text into sentences by lines,
 	each line being one sentence."""
@@ -6,9 +9,7 @@ def segment_by_lines(text: str):
 
 def segment_by_punctuation(text: str):
 	"""Segments text into sentences by punctuation."""
-	# TODO: implement this
-	segments = [text]
-	return segments
+	return nltk.sent_tokenize(text)
 
 
 def run(text: str):
@@ -18,5 +19,5 @@ def run(text: str):
 	for line in lines:
 		stripped_line = line.strip();
 		if stripped_line != '':
-			sentences.append(segment_by_punctuation(stripped_line))
+			sentences.extend(segment_by_punctuation(stripped_line))
 	return sentences
