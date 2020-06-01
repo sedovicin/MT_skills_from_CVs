@@ -12,8 +12,8 @@ class TFIDFVectorizator:
 	def __init__(self):
 		corpus = [nltk.corpus.gutenberg.raw(f) for f in
 				  nltk.corpus.gutenberg.fileids()]  # TODO: add a set of cvs here as well
-		corpus = ["Hello. What's up? I'm fine.", "I'm in love with a beautiful girl.",
-				  "What is your problem, my love?"]
+		# corpus = ["Hello. What's up? I'm fine.", "I'm in love with a beautiful girl.",
+		#		  "What is your problem, my love?"]
 		try:
 			with open(self.COLLECTION_FILE_NAME, 'rb') as collection_file:
 				self.vectorizer = pic.load(collection_file)
@@ -35,7 +35,7 @@ class TFIDFVectorizator:
 			avg = sum(docs) / len(docs)
 			self.word_tfidf[word[0]] = sum(docs) / len(docs)  # average TF-IDF score
 
-
-	def vectorize(self, words):
-		return self.vectorizer.transform([words])
+	def vectorize(self, word):
+		"""Returns TF-IDF score for given word, or 0 if the word does not exist in vocabulary."""
+		return self.word_tfidf.get(word, 0.0)
 
