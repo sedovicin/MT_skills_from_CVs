@@ -39,3 +39,32 @@ class TFIDFVectorizator:
 		"""Returns TF-IDF score for given word, or 0 if the word does not exist in vocabulary."""
 		return self.word_tfidf.get(word, 0.0)
 
+
+def word2vec_vectorizator():
+	"""Loads Word2Vec model from file, trained on corpora. If not exists, creates a new one."""
+	try:
+		with open("word2vec.obj", 'rb') as collection_file:
+			word2vec = pic.load(collection_file)
+
+			print("Loaded word2vec from file.")
+	except FileNotFoundError:
+		from gensim.models import Word2Vec
+		print("word2vec file not found, creating new...")
+		corpus = get_corpus_sentences()
+		print("Got corpus.")
+		word2vec = Word2Vec(sentences=corpus)
+
+		with open("word2vec.obj", 'wb') as collection_file:
+			pic.dump(word2vec, collection_file)
+			print("word2vec file created and loaded")
+	return word2vec
+
+
+def get_corpus_sentences():
+	"""Returns corpus made from NLTK Gutenberg files."""
+	import nltk
+
+	corpus = []
+	for f in nltk.corpus.gutenberg.fileids():
+		corpus.extend(nltk.corpus.gutenberg.sents(f))
+	return corpus
