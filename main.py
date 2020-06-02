@@ -1,3 +1,1 @@
-import TextCleaningTool as textCleaner;
-
 
