@@ -4,6 +4,7 @@ from keras_preprocessing.text import Tokenizer
 from keras_preprocessing.sequence import pad_sequences
 from keras.layers import Input, Embedding, Dense, Flatten
 from keras.models import Model
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 
 class CategorisatorNN(object):
@@ -25,7 +26,16 @@ class CategorisatorNN(object):
 		self.model.fit(self.x_train, self.y_train)
 
 	def evaluate(self, x_test, y_test):
-		pass
+		# TODO: add evaluation part
+		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x_test), maxlen=self.MAX_SEQ_LENGTH)
+
+		confidences = self.model.predict(x_seq, verbose=1)
+
+	def predict(self, x):
+		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.MAX_SEQ_LENGTH)
+
+		confidences = self.model.predict(x_seq, verbose=1)
+
 
 	def create_embedding_matrix(self, x_train):
 		self.tokenizer.fit_on_texts(x_train)
@@ -49,7 +59,7 @@ class CategorisatorNN(object):
 		layers = Dense(128, activation="relu")(embedding_layer)
 		layers = Flatten()(layers)
 		main_output = Dense(1, activation='softplus')(layers)
-		model = Model(inputs = sequence_input, outputs = main_output)
+		model = Model(inputs=sequence_input, outputs=main_output)
 		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 		print("Finished creating model")
