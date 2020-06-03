@@ -40,7 +40,7 @@ class TFIDFVectorizator:
 		return self.word_tfidf.get(word, 0.0)
 
 
-def word2vec_vectorizator():
+def get_pretrained_word2vec():
 	"""Loads Word2Vec model from file, trained on corpora. If not exists, creates a new one."""
 	try:
 		with open("word2vec.obj", 'rb') as collection_file:
