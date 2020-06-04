@@ -25,7 +25,7 @@ def remove_punctuation(tagged_sentences):
 	return clean
 
 
-def import_to_dataset(file, dictionary, value, overwrite=True):
+def add_to_dataset(file, dictionary, value, overwrite=True):
 	"""Lemmatizes every word in given file and puts it in given dictionary with given value.
 	File must be a path to file, not file pointer. If overwrite is true, overwrites
 	existing value with new one.
@@ -49,7 +49,32 @@ def import_to_dataset(file, dictionary, value, overwrite=True):
 			dictionary[word] = value
 
 
+def import_dataset(file):
+	"""Imports dataset from file. File must be readable by json.
+
+	:type file: str
+	:returns: Object the file is parsed into"""
+	fp = open(file, 'r', encoding='utf8')
+	json_file = json.load(fp)
+	fp.close()
+	return json_file
+
+
+def export_dataset(dataset, file):
+	"""Exports given dataset to given file.
+
+	:type dataset: dict
+	:type file: str"""
+	fp = open(file, 'w', encoding='utf8')
+	json.dump(dataset, fp)
+	fp.close()
+
+
 dataset = dict()
-import_to_dataset('cv_extracted/cvs/1_cv.txt', dataset, NOT_SKILL, overwrite=False)
-import_to_dataset('cv_extracted/skills/1_skills.txt', dataset, SKILL)
-print(dataset)
+add_to_dataset('cv_extracted/cvs/1_cv.txt', dataset, NOT_SKILL, overwrite=False)
+add_to_dataset('cv_extracted/skills/1_skills.txt', dataset, SKILL)
+
+export_dataset(dataset, 'dataset.json')
+new_dataset = import_dataset('dataset.json')
+
+print(dataset == new_dataset)
