@@ -3,20 +3,53 @@ import TextCleaningTool as text_cleaner
 import TextSegmentator as segmetator_to_sentences
 import SentenceTokenizator as sentence_to_tokens
 import POSTagger
-import TextNormalizator
+from TextNormalizator import WordTextNormalizator
+
+NOT_SKILL = 0
+SKILL = 1
+
+
+def remove_punctuation(tagged_sentences):
+	"""Removes punctuation from list of words with their tags as they are not really necessary in further steps.
+	Returns it as .
+
+	:type tagged_sentences: list[list[tuple]]
+	:return: new list without punctuation"""
+	clean = list()
+	for tagged_sentence in tagged_sentences:
+		clean_tagged_sentence = list()
+		for word_tag in tagged_sentence:
+			if word_tag[1] != '.':
+				clean_tagged_sentence.append(word_tag)
+		clean.append(clean_tagged_sentence)
+	return clean
+
+
+def import_to_dataset(file, dictionary, value, overwrite=True):
+	"""Lemmatizes every word in given file and puts it in given dictionary with given value.
+	File must be a path to file, not file pointer. If overwrite is true, overwrites
+	existing value with new one.
+
+	:type file: str
+	:type dictionary: dict
+	:type value: int
+	:type overwrite: bool"""
+	cleaned_text = text_cleaner.run(file)
+	line_in_sentences = segmetator_to_sentences.run(cleaned_text)
+	tokens = sentence_to_tokens.run(line_in_sentences)
+	pos_tags_sentences = POSTagger.run(tokens)
+	pos_tags_sents_clean = remove_punctuation(pos_tags_sentences)
+	normalizator = WordTextNormalizator()
+	lemmatized_words = list()
+	for sentence in pos_tags_sents_clean:
+		lemmatized_words.extend(normalizator.lemmatize_sentence(sentence))
+	# print(words)
+	for word in lemmatized_words:
+		if overwrite or word not in dictionary:
+			dictionary[word] = value
+
 
 dataset = dict()
-cleaned_text = text_cleaner.run('cv_extracted/cvs/1_cv.txt')
-# text = text_cleaner.extract_from_txt('cv_extracted/cvs/1_cv.txt')
-# print("------------TEXT:")
-# print(text)
-# cleaned_line = text_cleaner.remove_unsupported_chars(text)
-# print("------------CLEANED:")
-# print(cleaned_line)
-line_in_sentences = segmetator_to_sentences.run(cleaned_text)
-# print("------------SENTENCES:")
-# print(line_in_sentences)
-tokens = sentence_to_tokens.run(line_in_sentences)
-pos_tags = POSTagger.run(tokens)
-# print(pos_tags)
-
+import_to_dataset('cv_extracted/cvs/1_cv.txt', dataset, NOT_SKILL, overwrite=False)
+import_to_dataset('cv_extracted/skills/1_skills.txt', dataset, SKILL)
+print(dataset)
