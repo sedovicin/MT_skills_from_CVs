@@ -8,10 +8,14 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 
 
 class CategorisatorNN(object):
-	def __init__(self):
+	def __init__(self, corpus):
+		"""
+		:param corpus: Optional: path to corpus
+		:type corpus: str
+		"""
 		self.x_train = None
 		self.y_train = None
-		self.word2vec = vectorizators.get_pretrained_word2vec()
+		self.word2vec = vectorizators.get_word2vec(word2vec_path='word2vec.obj', corpus_path=corpus)
 		self.tokenizer = Tokenizer()
 		self.embedding_matrix = None
 		self.model = None
@@ -35,7 +39,6 @@ class CategorisatorNN(object):
 		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.MAX_SEQ_LENGTH)
 
 		confidences = self.model.predict(x_seq, verbose=1)
-
 
 	def create_embedding_matrix(self, x_train):
 		self.tokenizer.fit_on_texts(x_train)
