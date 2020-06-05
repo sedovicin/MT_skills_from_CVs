@@ -11,7 +11,6 @@ SKILL = 1
 
 def remove_punctuation(tagged_sentences):
 	"""Removes punctuation from list of words with their tags as they are not really necessary in further steps.
-	Returns it as .
 
 	:type tagged_sentences: list[list[tuple]]
 	:return: new list without punctuation"""
@@ -34,6 +33,7 @@ def add_to_dataset(file, dictionary, value, overwrite=True):
 	:type dictionary: dict
 	:type value: int
 	:type overwrite: bool"""
+	print("Adding %s to dictionary..." %file)
 	cleaned_text = text_cleaner.run(file)
 	line_in_sentences = segmetator_to_sentences.run(cleaned_text)
 	tokens = sentence_to_tokens.run(line_in_sentences)
@@ -65,16 +65,37 @@ def export_dataset(dataset, file):
 
 	:type dataset: dict
 	:type file: str"""
+	print("Started exporting dataset.")
 	fp = open(file, 'w', encoding='utf8')
 	json.dump(dataset, fp)
 	fp.close()
+	print("Finished exporting dataset.")
 
 
-dataset = dict()
-add_to_dataset('cv_extracted/cvs/1_cv.txt', dataset, NOT_SKILL, overwrite=False)
-add_to_dataset('cv_extracted/skills/1_skills.txt', dataset, SKILL)
+# dataset = dict()
+# for i in range(10000):
+# 	add_to_dataset('cv_extracted/cvs/%s_cv.txt' % str(i+1), dataset, NOT_SKILL, overwrite=False)
+# 	add_to_dataset('cv_extracted/skills/%s_skills.txt' % str(i+1), dataset, SKILL)
+# export_dataset(dataset, 'dataset.json')
+# print(dataset)
+#import vectorizators
 
-export_dataset(dataset, 'dataset.json')
-new_dataset = import_dataset('dataset.json')
+#dataset = import_dataset('dataset.json')
+#corpus = vectorizators.get_corpus_sentences()
+#corpus = list()
+# for i in range(10000):
+# 	print(i)
+# 	cleaned_text = text_cleaner.run('cv_extracted/cvs/%s_cv.txt' % str(i+1))
+# 	line_in_sentences = segmetator_to_sentences.run(cleaned_text)
+# 	tokens = sentence_to_tokens.run(line_in_sentences)
+# 	corpus.extend(tokens)
+#
+# fp = open('corpus.json', 'w', encoding='utf8')
+# json.dump(corpus, fp)
+# fp.close()
+#print(corpus)
 
-print(dataset == new_dataset)
+fp = open('corpus.json', 'r', encoding='utf8')
+corpus = json.load(fp)
+print(corpus)
+print(type(corpus))
