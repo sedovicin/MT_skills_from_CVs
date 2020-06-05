@@ -40,30 +40,50 @@ class TFIDFVectorizator:
 		return self.word_tfidf.get(word, 0.0)
 
 
-def get_pretrained_word2vec():
-	"""Loads Word2Vec model from file, trained on corpora. If not exists, creates a new one."""
-	try:
-		with open("word2vec.obj", 'rb') as collection_file:
-			word2vec = pic.load(collection_file)
+def get_word2vec(word2vec_path=None, corpus_path=None):
+	"""Loads pickled Word2Vec model from path. If the file doesn't exist, creates a new trained one using given corpus.
+	If the corpus is None, uses default corpus (Gutenberg).
 
-			print("Loaded word2vec from file.")
-	except FileNotFoundError:
-		from gensim.models import Word2Vec
-		print("word2vec file not found, creating new...")
-		corpus = get_corpus_sentences()
-		print("Got corpus.")
-		word2vec = Word2Vec(sentences=corpus)
-
-		with open("word2vec.obj", 'wb') as collection_file:
-			pic.dump(word2vec, collection_file)
-			print("word2vec file created and loaded")
+	:type word2vec_path: str
+	:type corpus_path: str
+	:return: Word2Vec trained object
+	:rtype: gensim.models.Word2Vec
+	"""
+	from gensim.models import Word2Vec
+	if word2vec_path is not None:
+		try:
+			with open(word2vec_path, 'rb') as collection_file:
+				word2vec = pic.load(collection_file)
+				print("Loaded Word2Vec from file.")
+		except FileNotFoundError:
+			print("Word2Vec file not found, creating new...")
+			if corpus_path is None:
+				corpus = get_gutenberg_corpus()
+				print("Got default corpus.")
+			else:
+				import json
+				try:
+					with open(corpus_path, 'r', encoding='utf8') as fp_corpus:
+						corpus = json.load(fp_corpus)
+						print("Loaded corpus from file.")
+				except FileNotFoundError:
+					corpus = get_gutenberg_corpus()
+					print("Corpus file not found, loading default corpus.")
+			word2vec = Word2Vec(sentences=corpus)
+			with open(word2vec_path, 'wb') as collection_file:
+				pic.dump(word2vec, collection_file)
+				print("Word2Vec file created and loaded")
+	else:
+		raise ValueError("Path to file must be given so the method knows where to find or to save model.")
 	return word2vec
 
 
-def get_corpus_sentences():
-	"""Returns corpus made from NLTK Gutenberg files."""
+def get_gutenberg_corpus():
+	"""
+	:returns: corpus made from NLTK Gutenberg files, in shape of sentences.
+	:rtype: list
+	"""
 	import nltk
-
 	corpus = []
 	for f in nltk.corpus.gutenberg.fileids():
 		corpus.extend(nltk.corpus.gutenberg.sents(f))
