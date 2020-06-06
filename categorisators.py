@@ -7,6 +7,23 @@ from keras.models import Model
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 
+def y_to_one_hot(y, categories_count):
+	"""
+	Turns regular y (categories) to its one-hot equivalent.
+	:param y: y to be transformed
+	:type y: list
+	:type categories_count: int
+	:param categories_count: amount of categories available
+	:return: one-hot equivalent of y
+	"""
+	one_hot = []
+	for value in y:
+		one_hot_equiv = np.zeros(categories_count)
+		one_hot_equiv[value] = 1
+		one_hot.append(one_hot_equiv.tolist())
+	return one_hot
+
+
 class CategorisatorNN(object):
 	def __init__(self, corpus=None):
 		"""
@@ -27,16 +44,22 @@ class CategorisatorNN(object):
 
 		self.create_embedding_matrix(self.x_train)
 		self.model = self.create_model()
-		self.model.fit(self.x_train, self.y_train)
+
+		self.model.fit(
+			self.x_train,
+			np.array(y_to_one_hot(self.y_train, 2)),
+			batch_size=1000,
+			epochs=5,
+			verbose=1)
 
 	def evaluate(self, x_test, y_test):
 		# TODO: add evaluation part
-		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x_test), maxlen=self.MAX_SEQ_LENGTH)
-
+		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x_test), maxlen=self.word2vec.vector_size)
 		confidences = self.model.predict(x_seq, verbose=1)
+		print(confidences)
 
 	def predict(self, x):
-		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.MAX_SEQ_LENGTH)
+		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.word2vec.vector_size)
 
 		confidences = self.model.predict(x_seq, verbose=1)
 
@@ -63,53 +86,78 @@ class CategorisatorNN(object):
 		print('Loaded %s word vectors' % count_words)
 
 	def create_model(self):
-		# input_phrase = Input(shape=(None, self.word2vec.vector_size))
-		# input_context = Input(shape=(None, self.word2vec.vector_size))
-		# input_ph_cont = Input(shape=(2,))
+		model_input = Input(shape=(self.word2vec.vector_size,))
+		emb = Embedding(
+			input_dim=len(self.tokenizer.word_index) + 1,
+			output_dim=self.word2vec.vector_size,
+			weights=[self.embedding_matrix],
+			trainable=False)(model_input)
+		lstm = LSTM(256)(emb)
+		dense = Dense(128, activation='relu')(lstm)
+		dense = Dense(64, activation='relu')(dense)
+		dense = Dense(16, activation='relu')(dense)
+		main_output = Dense(2, activation='softplus')(dense)
 
-		emb_phrase = Embedding(len(self.tokenizer.word_index),
-									self.word2vec.vector_size,
-									weights=[self.embedding_matrix],
-									trainable=False)(input_phrase)
-		emb_context = Embedding(len(self.tokenizer.word_index) + 1,
-									self.word2vec.vector_size,
-									weights=[self.embedding_matrix],
-									trainable=False)(input_context)
-		emb_ph_cont = Embedding(len(self.tokenizer.word_index) + 1,
-									self.word2vec.vector_size,
-									weights=[self.embedding_matrix],
-									trainable=False)(input_ph_cont)
-
-		lstm_phrase = LSTM(512)(emb_phrase)
-		lstm_context = LSTM(256)(emb_context)
-		dense_ph_cont = Dense(512, activation='relu')(emb_ph_cont)
-
-		dense_ph_2 = Dense(128, activation='relu')(lstm_phrase)
-		dense_cont_2 = Dense(128, activation='relu')(lstm_context)
-		dense_ph_cont_2 = Dense(256, activation='relu')(dense_ph_cont)
-
-		x = concatenate([dense_ph_2, dense_cont_2, dense_ph_cont_2])
-
-		x = Dense(128, activation='relu')(x)
-		x = Dense(64, activation='relu')(x)
-		x = Dense(32, activation='relu')(x)
-
-		main_output = Dense(2, activation='softplus')(x)
-
-		model = Model(inputs=[input_phrase, input_context, input_ph_cont], outputs=main_output)
-
-		#sequence_input = Input(shape=(self.MAX_SEQ_LENGTH,))
-		# embedding_layer = Embedding(len(self.tokenizer.word_index)+1,
-		# 							self.word2vec.vector_size,
-		# 							weights=[self.embedding_matrix],
-		# 							trainable=False)(sequence_input)
-		# layers = Dense(128, activation="relu")(embedding_layer)
-		# layers = Flatten()(layers)
-		# main_output = Dense(1, activation='softplus')(layers)
-		# model = Model(inputs=sequence_input, outputs=main_output)
+		model = Model(inputs=model_input, outputs=main_output)
 
 		model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 		print("Finished creating model")
 		print(model.summary())
 		return model
+
+# def create_model(self):
+	# 	input_phrase = Input(shape=(self.word2vec.vector_size,))
+	# 	input_context = Input(shape=(self.word2vec.vector_size,))
+	# 	input_ph_cont = Input(shape=(self.word2vec.vector_size,))
+	#
+	# 	emb_phrase = Embedding(
+	# 		input_dim=len(self.tokenizer.word_index) + 1,
+	# 		output_dim=self.word2vec.vector_size,
+	# 		weights=[self.embedding_matrix],
+	# 		trainable=False)(input_phrase)
+	# 	emb_context = Embedding(
+	# 		input_dim=len(self.tokenizer.word_index) + 1,
+	# 		output_dim=self.word2vec.vector_size,
+	# 		weights=[self.embedding_matrix],
+	# 		trainable=False)(input_context)
+	# 	emb_ph_cont = Embedding(
+	# 		input_dim=len(self.tokenizer.word_index) + 1,
+	# 		output_dim=self.word2vec.vector_size,
+	# 		weights=[self.embedding_matrix],
+	# 		trainable=False)(input_ph_cont)
+	#
+	# 	lstm_phrase = LSTM(256)(emb_phrase)
+	# 	lstm_context = LSTM(256)(emb_context)
+	# 	dense_ph_cont = Dense(512, activation='relu')(emb_ph_cont)
+	#
+	# 	dense_ph_2 = Dense(128, activation='relu')(lstm_phrase)
+	# 	dense_cont_2 = Dense(128, activation='relu')(lstm_context)
+	# 	dense_ph_cont_2 = Dense(256, activation='relu')(dense_ph_cont)
+	# 	dense_ph_cont_2 = Dense(128, activation='relu')(dense_ph_cont_2)
+	#
+	# 	x = concatenate([dense_ph_2, dense_cont_2, dense_ph_cont_2])
+	#
+	# 	x = Dense(128, activation='relu')(x)
+	# 	x = Dense(64, activation='relu')(x)
+	# 	x = Dense(32, activation='relu')(x)
+	#
+	# 	main_output = Dense(2, activation='softplus')(x)
+	#
+	# 	model = Model(inputs=[emb_phrase, emb_context, emb_ph_cont], outputs=main_output)
+	#
+	# 	#sequence_input = Input(shape=(self.MAX_SEQ_LENGTH,))
+	# 	# embedding_layer = Embedding(len(self.tokenizer.word_index)+1,
+	# 	# 							self.word2vec.vector_size,
+	# 	# 							weights=[self.embedding_matrix],
+	# 	# 							trainable=False)(sequence_input)
+	# 	# layers = Dense(128, activation="relu")(embedding_layer)
+	# 	# layers = Flatten()(layers)
+	# 	# main_output = Dense(1, activation='softplus')(layers)
+	# 	# model = Model(inputs=sequence_input, outputs=main_output)
+	#
+	# 	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+	#
+	# 	print("Finished creating model")
+	# 	print(model.summary())
+	# 	return model
