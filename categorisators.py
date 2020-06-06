@@ -44,24 +44,46 @@ class CategorisatorNN(object):
 
 		self.create_embedding_matrix(self.x_train)
 		self.model = self.create_model()
-
+		self.x_train = self.words_to_word2vec_vectors(x_train)
+		self.y_train = np.array(y_to_one_hot(self.y_train, 2))
 		self.model.fit(
 			self.x_train,
-			np.array(y_to_one_hot(self.y_train, 2)),
+			self.y_train,
 			batch_size=1000,
-			epochs=5,
+			epochs=1,
 			verbose=1)
 
 	def evaluate(self, x_test, y_test):
 		# TODO: add evaluation part
 		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x_test), maxlen=self.word2vec.vector_size)
-		confidences = self.model.predict(x_seq, verbose=1)
-		print(confidences)
+
+		results = self.model.evaluate(x_seq, y_test, verbose=1)
+		print("loss, acc", results)
 
 	def predict(self, x):
 		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.word2vec.vector_size)
 
 		confidences = self.model.predict(x_seq, verbose=1)
+
+	def words_to_word2vec_vectors(self, words):
+		"""Creates list of vectors for given words. Vectors for words are fetched from Word2Vec, or randomly generated if
+		Word2Vec does not contain the processed word.
+
+		:param words: list of words to be processed
+		:type words: List
+		:return: new array containing vectors
+		:rtype: numpy.ndarray
+		"""
+		print("Turning words to vectors...")
+		vectors = np.zeros((len(words), self.word2vec.wv.vector_size))
+		for i in range(len(words)):
+			try:
+				vector = self.word2vec.wv.get_vector(words[i])
+				vectors[i] = vector
+			except KeyError:
+				pass
+		print("Finished turning words to vectors.")
+		return vectors
 
 	def create_embedding_matrix(self, x_train):
 		"""
@@ -86,12 +108,14 @@ class CategorisatorNN(object):
 		print('Loaded %s word vectors' % count_words)
 
 	def create_model(self):
+		print("Creating model...")
 		model_input = Input(shape=(self.word2vec.vector_size,))
 		emb = Embedding(
 			input_dim=len(self.tokenizer.word_index) + 1,
 			output_dim=self.word2vec.vector_size,
 			weights=[self.embedding_matrix],
 			trainable=False)(model_input)
+		# emb = self.word2vec.wv.get_keras_embedding()(model_input)
 		lstm = LSTM(256)(emb)
 		dense = Dense(128, activation='relu')(lstm)
 		dense = Dense(64, activation='relu')(dense)
