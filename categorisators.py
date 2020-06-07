@@ -1,26 +1,26 @@
 import vectorizators
 import numpy as np
 from keras_preprocessing.text import Tokenizer
-from keras_preprocessing.sequence import pad_sequences
-from keras.layers import Input, Embedding, Dense, Flatten, LSTM, concatenate
+from keras.layers import Input, Dense, LSTM
 from keras.models import Model
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 
 def y_to_one_hot(y, categories_count):
 	"""
 	Turns regular y (categories) to its one-hot equivalent.
+
 	:param y: y to be transformed
-	:type y: list
+	:type y:
 	:type categories_count: int
 	:param categories_count: amount of categories available
-	:return: one-hot equivalent of y
+	:return: one-hot equivalent of y, a 2D NumPy array
+	:rtype: numpy.ndarray
 	"""
-	one_hot = []
+	one_hot = np.zeros((len(y), categories_count))
+	i = 0
 	for value in y:
-		one_hot_equiv = np.zeros(categories_count)
-		one_hot_equiv[value] = 1
-		one_hot.append(one_hot_equiv.tolist())
+		one_hot[i][value] = 1
+		i += 1
 	return one_hot
 
 
@@ -33,90 +33,106 @@ class CategorisatorNN(object):
 		self.x_train = None
 		self.y_train = None
 		self.word2vec = vectorizators.get_word2vec(word2vec_path='word2vec.obj', corpus_path=corpus)
-		self.tokenizer = Tokenizer()
 		self.embedding_matrix = None
 		self.model = None
-		self.MAX_SEQ_LENGTH = 200
+		self.tokenizer = Tokenizer()
 
 	def train(self, x_train, y_train):
-		self.x_train = x_train
+		# self.x_train = x_train
 		self.y_train = y_train
 
-		self.create_embedding_matrix(self.x_train)
+		# self.create_embedding_matrix(x_train)
 		self.model = self.create_model()
+		print("Creating x_train...")
 		self.x_train = self.words_to_word2vec_vectors(x_train)
-		self.y_train = np.array(y_to_one_hot(self.y_train, 2))
+		print("Creating y_train...")
+		self.y_train = y_to_one_hot(self.y_train, 2)
+		print("Fitting model...")
 		self.model.fit(
-			self.x_train,
+			self.x_train.reshape((self.x_train.shape[0], 1, self.x_train.shape[1])),
 			self.y_train,
 			batch_size=1000,
-			epochs=1,
+			epochs=3,
 			verbose=1)
 
 	def evaluate(self, x_test, y_test):
-		# TODO: add evaluation part
-		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x_test), maxlen=self.word2vec.vector_size)
-
-		results = self.model.evaluate(x_seq, y_test, verbose=1)
+		"""
+		Must give the sentences!
+		:param x_test:
+		:param y_test:
+		:return:
+		"""
+		x_test_seq = self.words_to_word2vec_vectors(x_test)
+		y_test_seq = y_to_one_hot(y_test, 2)
+		results = self.model.evaluate(
+			x_test_seq.reshape((x_test_seq.shape[0], 1, x_test_seq.shape[1])),
+			y_test_seq, verbose=1)
 		print("loss, acc", results)
 
 	def predict(self, x):
-		x_seq = pad_sequences(self.tokenizer.texts_to_sequences(x), maxlen=self.word2vec.vector_size)
+		"""
+		Must give the sentences!
+		:param x:
+		:return:
+		"""
+		x_test_seq = self.words_to_word2vec_vectors(x)
+		results = self.model.predict(
+			x_test_seq.reshape((x_test_seq.shape[0], 1, x_test_seq.shape[1])),
+			verbose=1)
+		print(results)
 
-		confidences = self.model.predict(x_seq, verbose=1)
+	def sentences_to_word2vec_vectors(self, sentences):
+		vectors_all = np.array((None, 100))
+		for sentence in sentences:
+			vectors = self.words_to_word2vec_vectors(sentence)
+			np.concatenate((vectors_all, vectors), out=vectors_all)
 
 	def words_to_word2vec_vectors(self, words):
-		"""Creates list of vectors for given words. Vectors for words are fetched from Word2Vec, or randomly generated if
+		"""Creates list of vectors for given words.
+		Vectors for words are fetched from Word2Vec, or set to 0 (all the values) if
 		Word2Vec does not contain the processed word.
 
 		:param words: list of words to be processed
-		:type words: List
+		:type words: list
 		:return: new array containing vectors
 		:rtype: numpy.ndarray
 		"""
 		print("Turning words to vectors...")
 		vectors = np.zeros((len(words), self.word2vec.wv.vector_size))
-		for i in range(len(words)):
+		index = 0
+		for word in words:
 			try:
-				vector = self.word2vec.wv.get_vector(words[i])
-				vectors[i] = vector
+				vector = self.word2vec.wv.get_vector(word)
 			except KeyError:
-				pass
+				vector = self.create_vector_for_oov_word(words, index)
+			vectors[index] = vector
+			index += 1
 		print("Finished turning words to vectors.")
 		return vectors
 
-	def create_embedding_matrix(self, x_train):
-		"""
-		Creates embedding matrix. Fills it with vectors from word2vec for each word in training set, if the word exists.
-		If not, skips the word.
-		:param x_train: input sentences for training
-		:type x_train:
-		"""
-		self.tokenizer.fit_on_texts(x_train)
-		self.x_train = pad_sequences(self.tokenizer.texts_to_sequences(self.x_train), maxlen=self.word2vec.vector_size)
-		embeddings_index = dict()
-		for word in self.word2vec.wv.vocab:
-			embeddings_index[word] = self.word2vec.wv.get_vector(word)
-		# added 1 because index 0 is reserved for masking
-		self.embedding_matrix = np.zeros((len(self.tokenizer.word_index) + 1, self.word2vec.vector_size))
-		count_words = 0
-		for word, i in self.tokenizer.word_index.items():
-			embedding_vector = embeddings_index.get(word)
-			if embedding_vector is not None:
-				self.embedding_matrix[i] = embedding_vector
-				count_words = count_words + 1
-		print('Loaded %s word vectors' % count_words)
+	def create_vector_for_oov_word(self, words, index):
+		edited = words.copy()
+		del edited[index]
+		predicted_similar_words = self.word2vec.predict_output_word(edited)
+
+		if predicted_similar_words is None:
+			return np.zeros(self.word2vec.wv.vector_size)
+
+		sum_probabs = 0
+		for word in predicted_similar_words:
+			sum_probabs += word[1]
+		factor = 1.0 / sum_probabs
+		new_vector = np.zeros(self.word2vec.wv.vector_size)
+		for word in predicted_similar_words:
+			word_vector = self.word2vec.wv.get_vector(word[0])
+			new_vector += (word_vector * word[1] * factor)
+		return new_vector
 
 	def create_model(self):
 		print("Creating model...")
-		model_input = Input(shape=(self.word2vec.vector_size,))
-		emb = Embedding(
-			input_dim=len(self.tokenizer.word_index) + 1,
-			output_dim=self.word2vec.vector_size,
-			weights=[self.embedding_matrix],
-			trainable=False)(model_input)
-		# emb = self.word2vec.wv.get_keras_embedding()(model_input)
-		lstm = LSTM(256)(emb)
+		model_input = Input(shape=(None, self.word2vec.vector_size))
+
+		lstm = LSTM(256)(model_input)
 		dense = Dense(128, activation='relu')(lstm)
 		dense = Dense(64, activation='relu')(dense)
 		dense = Dense(16, activation='relu')(dense)
@@ -129,59 +145,3 @@ class CategorisatorNN(object):
 		print("Finished creating model")
 		print(model.summary())
 		return model
-
-# def create_model(self):
-	# 	input_phrase = Input(shape=(self.word2vec.vector_size,))
-	# 	input_context = Input(shape=(self.word2vec.vector_size,))
-	# 	input_ph_cont = Input(shape=(self.word2vec.vector_size,))
-	#
-	# 	emb_phrase = Embedding(
-	# 		input_dim=len(self.tokenizer.word_index) + 1,
-	# 		output_dim=self.word2vec.vector_size,
-	# 		weights=[self.embedding_matrix],
-	# 		trainable=False)(input_phrase)
-	# 	emb_context = Embedding(
-	# 		input_dim=len(self.tokenizer.word_index) + 1,
-	# 		output_dim=self.word2vec.vector_size,
-	# 		weights=[self.embedding_matrix],
-	# 		trainable=False)(input_context)
-	# 	emb_ph_cont = Embedding(
-	# 		input_dim=len(self.tokenizer.word_index) + 1,
-	# 		output_dim=self.word2vec.vector_size,
-	# 		weights=[self.embedding_matrix],
-	# 		trainable=False)(input_ph_cont)
-	#
-	# 	lstm_phrase = LSTM(256)(emb_phrase)
-	# 	lstm_context = LSTM(256)(emb_context)
-	# 	dense_ph_cont = Dense(512, activation='relu')(emb_ph_cont)
-	#
-	# 	dense_ph_2 = Dense(128, activation='relu')(lstm_phrase)
-	# 	dense_cont_2 = Dense(128, activation='relu')(lstm_context)
-	# 	dense_ph_cont_2 = Dense(256, activation='relu')(dense_ph_cont)
-	# 	dense_ph_cont_2 = Dense(128, activation='relu')(dense_ph_cont_2)
-	#
-	# 	x = concatenate([dense_ph_2, dense_cont_2, dense_ph_cont_2])
-	#
-	# 	x = Dense(128, activation='relu')(x)
-	# 	x = Dense(64, activation='relu')(x)
-	# 	x = Dense(32, activation='relu')(x)
-	#
-	# 	main_output = Dense(2, activation='softplus')(x)
-	#
-	# 	model = Model(inputs=[emb_phrase, emb_context, emb_ph_cont], outputs=main_output)
-	#
-	# 	#sequence_input = Input(shape=(self.MAX_SEQ_LENGTH,))
-	# 	# embedding_layer = Embedding(len(self.tokenizer.word_index)+1,
-	# 	# 							self.word2vec.vector_size,
-	# 	# 							weights=[self.embedding_matrix],
-	# 	# 							trainable=False)(sequence_input)
-	# 	# layers = Dense(128, activation="relu")(embedding_layer)
-	# 	# layers = Flatten()(layers)
-	# 	# main_output = Dense(1, activation='softplus')(layers)
-	# 	# model = Model(inputs=sequence_input, outputs=main_output)
-	#
-	# 	model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-	#
-	# 	print("Finished creating model")
-	# 	print(model.summary())
-	# 	return model

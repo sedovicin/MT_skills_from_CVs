@@ -18,6 +18,7 @@ class MyTestCase(unittest.TestCase):
 
 		categorisator.train(x_train, y_train)
 		categorisator.evaluate(x_test, y_test)
+		categorisator.predict(x_test)
 
 
 if __name__ == '__main__':
