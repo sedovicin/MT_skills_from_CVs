@@ -38,10 +38,8 @@ class CategorisatorNN(object):
 		self.tokenizer = Tokenizer()
 
 	def train(self, x_train, y_train):
-		# self.x_train = x_train
 		self.y_train = y_train
 
-		# self.create_embedding_matrix(x_train)
 		self.model = self.create_model()
 		print("Creating x_train...")
 		self.x_train = self.words_to_word2vec_vectors(x_train)
@@ -51,8 +49,8 @@ class CategorisatorNN(object):
 		self.model.fit(
 			self.x_train.reshape((self.x_train.shape[0], 1, self.x_train.shape[1])),
 			self.y_train,
-			batch_size=1000,
-			epochs=3,
+			batch_size=5000,
+			epochs=10,
 			verbose=1)
 
 	def evaluate(self, x_test, y_test):
@@ -136,7 +134,7 @@ class CategorisatorNN(object):
 		dense = Dense(128, activation='relu')(lstm)
 		dense = Dense(64, activation='relu')(dense)
 		dense = Dense(16, activation='relu')(dense)
-		main_output = Dense(2, activation='softplus')(dense)
+		main_output = Dense(2, activation='softmax')(dense)
 
 		model = Model(inputs=model_input, outputs=main_output)
 
