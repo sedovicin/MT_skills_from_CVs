@@ -1,17 +1,17 @@
 from unittest import TestCase
-import TextCleaningTool as tct;
+import TextFromFileExtractor as extractor;
 
 
 class Test(TestCase):
 	def test_run(self):
 		with self.assertRaises(FileNotFoundError):
-			tct.run('testFiles/not_existing.file')
+			extractor.extract('testFiles/not_existing.file')
 		with self.assertRaises(TypeError):
-			tct.run('testFiles/cv.html')
-		self.assertEqual(PDF_FILE_TEXT, tct.run('testFiles/small.pdf'))
+			extractor.extract('testFiles/cv.html')
 
-		self.assertEqual(TXT_FILE_TEXT, tct.run('testFiles/small.txt'))
-		self.assertEqual(DOCX_FILE_TEXT, tct.run('testFiles/small.docx'))
+		self.assertEqual(PDF_FILE_TEXT, extractor.extract('testFiles/small.pdf'))
+		self.assertEqual(TXT_FILE_TEXT, extractor.extract('testFiles/small.txt'))
+		self.assertEqual(DOCX_FILE_TEXT, extractor.extract('testFiles/small.docx'))
 # 		self.assertEqual(DOC_FILE_TEXT, tct.run('testFiles/small.doc'));
 
 
