@@ -2,6 +2,7 @@ import unittest
 from categorisators import CategorisatorNN
 import json
 
+
 class MyTestCase(unittest.TestCase):
 	def test_something(self):
 		x_train = []
@@ -18,6 +19,7 @@ class MyTestCase(unittest.TestCase):
 
 		categorisator.train(x_train, y_train)
 		categorisator.evaluate(x_test, y_test)
+		categorisator.predict(x_test)
 
 
 if __name__ == '__main__':
