@@ -69,7 +69,9 @@ def get_word2vec(word2vec_path=None, corpus_path=None):
 				except FileNotFoundError:
 					corpus = get_gutenberg_corpus()
 					print("Corpus file not found, loading default corpus.")
-			word2vec = Word2Vec(sentences=corpus)
+			word2vec = Word2Vec(min_count=0, iter=10)
+			word2vec.build_vocab(sentences=corpus)
+			word2vec.train(sentences=corpus, total_examples=word2vec.corpus_count, epochs=10)
 			with open(word2vec_path, 'wb') as collection_file:
 				pic.dump(word2vec, collection_file)
 				print("Word2Vec file created and loaded")
