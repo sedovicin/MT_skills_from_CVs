@@ -25,7 +25,6 @@ class FullTest(unittest.TestCase):
 				print("Stem:" + tn.stem(token[0]))
 				print("Lemmatized:" + tn.lemmatize(token))
 
-
 if __name__ == '__main__':
 	unittest.main()
 

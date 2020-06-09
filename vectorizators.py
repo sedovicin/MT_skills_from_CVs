@@ -5,6 +5,7 @@ import pickle as pic
 from nltk.text import TextCollection
 import numpy as np
 
+
 class TFIDFVectorizator:
 
 	COLLECTION_FILE_NAME = "text_collection.obj"
@@ -41,10 +42,13 @@ class TFIDFVectorizator:
 
 
 def get_word2vec(word2vec_path=None, corpus_path=None):
-	"""Loads pickled Word2Vec model from path. If the file doesn't exist, creates a new trained one using given corpus.
+	"""
+	Loads pickled Word2Vec model from path. If the file doesn't exist, creates a new trained one using given corpus.
 	If the corpus is None, uses default corpus (Gutenberg).
 
+	:param word2vec_path: path to file containing Word2Vec model
 	:type word2vec_path: str
+	:param corpus_path: path to file containing corpus
 	:type corpus_path: str
 	:return: Word2Vec trained object
 	:rtype: gensim.models.Word2Vec

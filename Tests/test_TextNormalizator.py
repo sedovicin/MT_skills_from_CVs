@@ -1,8 +1,8 @@
 from unittest import TestCase
 from TextNormalizator import WordTextNormalizator
 
-class Test(TestCase):
 
+class Test(TestCase):
 	def test_stem(self):
 		self.assertEqual('skill', WordTextNormalizator().stem('skills'))
 
