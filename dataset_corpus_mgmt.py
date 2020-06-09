@@ -105,18 +105,26 @@ def export_as_json(data, file):
 	print("Finished exporting data.")
 
 
-dataset = dict()
-corpus = vectorizators.get_gutenberg_corpus()
-for i in range(10000):
-	if i % 100 == 0:
-		print("Processing file no. %s..." % str(i))
+def create_dataset_corpus():
+	dataset = dict()
+	corpus = vectorizators.get_gutenberg_corpus()
+	for i in range(10000):
+		if i % 100 == 0:
+			print("Processing file no. %s..." % str(i))
 
-	tokens = file_to_tokens('cv_extracted/cvs/%s_cv.txt' % str(i + 1))
-	add_to_dataset(tokens, dataset, NOT_SKILL, overwrite=False)
-	corpus.extend(tokens)
+		tokens = file_to_tokens('cv_extracted/cvs/%s_cv.txt' % str(i + 1))
+		add_to_dataset(tokens, dataset, NOT_SKILL, overwrite=False)
+		corpus.extend(tokens)
 
-	tokens_skill = file_to_tokens('cv_extracted/skills/%s_skills.txt' % str(i + 1))
-	add_to_dataset(tokens_skill, dataset, SKILL)
+		tokens_skill = file_to_tokens('cv_extracted/skills/%s_skills.txt' % str(i + 1))
+		add_to_dataset(tokens_skill, dataset, SKILL)
+	export_as_json(dataset, 'dataset.json')
+	export_as_json(corpus, 'corpus.json')
 
-export_as_json(dataset, 'dataset.json')
-export_as_json(corpus, 'corpus.json')
+
+def main():
+	pass
+
+
+if __name__ == "__main__":
+	main()
