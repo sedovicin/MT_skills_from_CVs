@@ -29,6 +29,30 @@ def y_to_one_hot(y, categories_count):
 	return one_hot
 
 
+def create_y_from_x(x, dataset):
+	"""
+	Creates output structure for input
+
+	:param x: input
+	:type x: list[list[str]]
+	:param dataset: dictionary that contains target values
+	:type dataset: dict[str, int]
+	:return: target structure
+	:rtype: list[list[str]]
+	"""
+	y = list()
+	for sentence in x:
+		y_sent = list()
+		for word in sentence:
+			value = dataset[word]
+			if value is not None:
+				y_sent.append(value)
+			else:
+				y_sent.append(0)
+		y.append(y_sent)
+	return y
+
+
 class CategorisatorNN(object):
 	def __init__(self, corpus=None):
 		"""
