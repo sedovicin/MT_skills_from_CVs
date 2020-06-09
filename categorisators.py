@@ -38,8 +38,9 @@ def create_y_from_x(x, dataset):
 	:param dataset: dictionary that contains target values
 	:type dataset: dict[str, int]
 	:return: target structure
-	:rtype: list[list[str]]
+	:rtype: list[list[int]]
 	"""
+	print("Creating y...")
 	y = list()
 	for sentence in x:
 		y_sent = list()
@@ -50,6 +51,7 @@ def create_y_from_x(x, dataset):
 			else:
 				y_sent.append(0)
 		y.append(y_sent)
+	print("Created y.")
 	return y
 
 
