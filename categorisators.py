@@ -1,8 +1,8 @@
-import vectorizators
 import numpy as np
-from keras_preprocessing.text import Tokenizer
 from keras.layers import Input, Dense, LSTM
 from keras.models import Model
+
+import vectorizators
 
 
 def y_to_one_hot(y, categories_count):
@@ -29,6 +29,25 @@ def y_to_one_hot(y, categories_count):
 	return one_hot
 
 
+def y_1d_to_one_hot(y_1d, categories_count):
+	"""
+	Turns target value (categories) to its one-hot equivalent.
+
+	:param y_1d: y to be transformed
+	:type y_1d: list[int]
+	:param categories_count: amount of categories available
+	:type categories_count: int
+	:return: one-hot equivalent of y, a NumPy array
+	:rtype: numpy.ndarray
+	"""
+	one_hot = np.zeros((len(y_1d), categories_count))
+	i = 0
+	for value in y_1d:
+		one_hot[i][value] = 1
+		i += 1
+	return one_hot
+
+
 def create_y_from_x(x, dataset):
 	"""
 	Creates output structure for input
@@ -44,11 +63,13 @@ def create_y_from_x(x, dataset):
 	y = list()
 	for sentence in x:
 		y_sent = list()
+		# print(sentence)
 		for word in sentence:
-			value = dataset[word]
-			if value is not None:
+			# print(word)
+			try:
+				value = dataset[word]
 				y_sent.append(value)
-			else:
+			except KeyError:
 				y_sent.append(0)
 		y.append(y_sent)
 	print("Created y.")
@@ -79,10 +100,11 @@ class CategorisatorNN(object):
 		:param epochs: Number of epochs to train the model.
 		:type epochs: int
 		"""
-		print("Creating x_train...")
-		self.x_train = self.sentences_to_word2vec_vectors(x_train)
-		print("Creating y_train...")
-		self.y_train = y_to_one_hot(y_train, 2)
+		# print("Creating x_train...")
+		# self.x_train = self.sentences_to_word2vec_vectors(x_train)
+		# print("Creating y_train...")
+		# self.y_train = y_to_one_hot(y_train, 2)
+		self.x_train, self.y_train = self.simplify_x_y(x_train, y_train)
 		print("Fitting model...")
 		self.model.fit(
 			self.x_train.reshape((self.x_train.shape[0], 1, self.x_train.shape[1])),
@@ -102,8 +124,10 @@ class CategorisatorNN(object):
 		:return: values for loss and accuracy as tuple
 		:rtype: tuple[float, float]
 		"""
-		x_test_seq = self.sentences_to_word2vec_vectors(x_test)
-		y_test_seq = y_to_one_hot(y_test, 2)
+		print("Evaluating test set...")
+		# x_test_seq = self.sentences_to_word2vec_vectors(x_test)
+		# y_test_seq = y_to_one_hot(y_test, 2)
+		x_test_seq, y_test_seq = self.simplify_x_y(x_test, y_test)
 		return self.model.evaluate(
 			x_test_seq.reshape((x_test_seq.shape[0], 1, x_test_seq.shape[1])),
 			y_test_seq, verbose=1)
@@ -115,11 +139,46 @@ class CategorisatorNN(object):
 		:param x: input to be processed
 		:return: output
 		"""
-		x_test_seq = self.words_to_word2vec_vectors(x)
+		x_test_words, x_test_vectors = self.simplify_x(x)
+		print(np.shape(x_test_vectors))
+		print(x_test_vectors)
 		results = self.model.predict(
-			x_test_seq.reshape((x_test_seq.shape[0], 1, x_test_seq.shape[1])),
+			x_test_vectors.reshape((x_test_vectors.shape[0], 1, x_test_vectors.shape[1])),
 			verbose=1)
-		print(results)
+		for i in range(len(x_test_words)):
+			print("%s: %s" % (x_test_words[i], results[i]))
+
+	def simplify_x(self, x):
+		print("Simplifying x...")
+		dictionary_vec_val = dict()
+		for sentence in x:
+			vectors = self.sentence_to_word2vec_vectors(sentence)
+
+			for index in range(len(sentence)):
+				dictionary_vec_val[sentence[index]] = vectors[index]
+
+		return np.array(list(dictionary_vec_val.keys())), np.array(list(dictionary_vec_val.values()))
+
+	def simplify_x_y(self, x, y):
+
+		print("Simplifying x and y...")
+		dictionary_vec_val = dict()
+		i = 0
+		for sentence in x:
+			vectors = self.sentence_to_word2vec_vectors(sentence)
+			values = y[i]
+			for index in range(len(sentence)):
+				dictionary_vec_val[sentence[index]] = (vectors[index], values[index])
+			i += 1
+		x_train_new = list()
+		y_train_new = list()
+		for tuple_vec_val in dictionary_vec_val.values():
+			x_train_new.append(tuple_vec_val[0])
+			y_train_new.append(tuple_vec_val[1])
+
+		return np.array(x_train_new), y_1d_to_one_hot(y_train_new, 2)
+		# x_train_new = np.array([tuple_vec_val[0] for tuple_vec_val in dictionary_vec_val.values()])
+		# y_train_new = np.array([tuple_vec_val[1] for tuple_vec_val in dictionary_vec_val.values()])
 
 	def sentences_to_word2vec_vectors(self, sentences):
 		"""
@@ -135,29 +194,29 @@ class CategorisatorNN(object):
 		print("Transforming all words to vectors...")
 		vectors_all = np.array((None, self.word2vec.wv.vector_size))
 		for sentence in sentences:
-			vectors = self.words_to_word2vec_vectors(sentence)
+			vectors = self.sentence_to_word2vec_vectors(sentence)
 			np.concatenate((vectors_all, vectors), out=vectors_all)
 		print("Finished transforming words to vectors.")
 		return vectors_all
 
-	def words_to_word2vec_vectors(self, words):
+	def sentence_to_word2vec_vectors(self, sentence):
 		"""
-		Creates list of vectors for given words.
+		Creates list of vectors for given sentence (list of words).
 		Vectors for words are fetched from Word2Vec, or set to 0 (all the values) if
-		Word2Vec does not contain the processed word.
+		Word2Vec does not contain any of the word in sentence.
 
-		:param words: list of words to be processed
-		:type words: list[str]
+		:param sentence: list of words to be processed
+		:type sentence: list[str]
 		:return: new array containing vectors
 		:rtype: numpy.ndarray
 		"""
-		vectors = np.zeros((len(words), self.word2vec.wv.vector_size))
+		vectors = np.zeros((len(sentence), self.word2vec.wv.vector_size))
 		index = 0
-		for word in words:
+		for word in sentence:
 			try:
 				vector = self.word2vec.wv.get_vector(word)
 			except KeyError:
-				vector = self.create_vector_for_oov_word(words, index)
+				vector = self.create_vector_for_oov_word(sentence, index)
 			vectors[index] = vector
 			index += 1
 		return vectors
