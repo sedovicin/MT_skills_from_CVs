@@ -105,10 +105,10 @@ def export_as_json(data, file):
 	print("Finished exporting data.")
 
 
-def create_dataset_corpus():
+def create_dataset_corpus(prefix, begin, end):
 	dataset = dict()
 	corpus = vectorizators.get_gutenberg_corpus()
-	for i in range(10000):
+	for i in range(begin, end):
 		if i % 100 == 0:
 			print("Processing file no. %s..." % str(i))
 
@@ -118,8 +118,8 @@ def create_dataset_corpus():
 
 		tokens_skill = file_to_tokens('cv_extracted/skills/%s_skills.txt' % str(i + 1))
 		add_to_dataset(tokens_skill, dataset, SKILL)
-	export_as_json(dataset, 'dataset.json')
-	export_as_json(corpus, 'corpus.json')
+	export_as_json(dataset, 'dataset_%s.json' % prefix)
+	export_as_json(corpus, 'corpus_%s.json' % prefix)
 
 
 def main():

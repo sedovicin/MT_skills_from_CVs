@@ -148,7 +148,7 @@ class CategorisatorNN(object):
 		print("Transforming x...")
 		dictionary_vec_val = dict()
 		for sentence in x:
-			vectors = self.sentence_to_word2vec_vectors(sentence)
+			vectors = self.sentence_to_word2vec_vectors(sentence, dictionary_vec_val)
 
 			for index in range(len(sentence)):
 				dictionary_vec_val[sentence[index]] = vectors[index]
@@ -173,14 +173,14 @@ class CategorisatorNN(object):
 		dictionary_vec_val = dict()
 		i = 0
 		for sentence in x:
-			vectors = self.sentence_to_word2vec_vectors(sentence)
+			vectors = self.sentence_to_word2vec_vectors(sentence, dictionary_vec_val)
 			values = y[i]
 			for index in range(len(sentence)):
 				dictionary_vec_val[sentence[index]] = (vectors[index], values[index])
 			i += 1
 		return dictionary_vec_val
 
-	def sentence_to_word2vec_vectors(self, sentence):
+	def sentence_to_word2vec_vectors(self, sentence, dictionary):
 		"""
 		Creates list of vectors for given sentence (list of words).
 		Vectors for words are fetched from Word2Vec, or set to 0 (all the values) if
@@ -188,6 +188,7 @@ class CategorisatorNN(object):
 
 		:param sentence: list of words to be processed
 		:type sentence: list[str]
+		:param dictionary: additional lookup dictionary for out-of-vocabulary words
 		:return: new array containing vectors
 		:rtype: numpy.ndarray
 		"""
@@ -197,7 +198,15 @@ class CategorisatorNN(object):
 			try:
 				vector = self.word2vec.wv.get_vector(word)
 			except KeyError:
-				vector = self.create_vector_for_oov_word(sentence, index)
+				try:
+					value = dictionary.get(word)
+					if type(value) is tuple:
+						vector = value[0]
+					else:
+						vector = value
+					# TODO: combine word's predicted vectors for better vector accuracy
+				except KeyError:
+					vector = self.create_vector_for_oov_word(sentence, index)
 			vectors[index] = vector
 			index += 1
 		return vectors
