@@ -61,25 +61,21 @@ class Phrase:
 		return self.str()
 
 
-def get_phrases(cv_path, skill_path):
+def get_phrases(cv_path, words):
 	"""
 	Extracts phrases from file containing CV.
-	Requires file that contains skill words.
-	:param cv_path:
-	:param skill_path:
-	:return:
+	Requires dictionary to determine into which category the word (and phrase) belong.
+	:param cv_path: path to file to be processed
+	:type cv_path: str
+	:param words: dictionary containing words as keys and values as categories
+	:type words: dict[str, int]
+	:return: list containing list of phrases for every sentence
+	:rtype: list[list[Phrase]]
 	"""
 	cv_sentences = dc_mgmt.file_to_tokens(cv_path)
 	tags = POSTagger.tag_pos_sentences(cv_sentences)
 	parser = PhraseParser()
 	parsed_sents = parser.parse_sents(tags)
-
-	sentences_skills = dc_mgmt.file_to_tokens(skill_path)
-	skills_dict = dict()
-	for sentence in sentences_skills:
-		for word in sentence:
-			skills_dict[word] = 1
-	skills = list(skills_dict.keys())
 
 	cv_phrases = list()
 	for sentence in parsed_sents:
@@ -96,7 +92,7 @@ def get_phrases(cv_path, skill_path):
 				break
 
 			# GET IF FIRST WORD OF PHRASE IS SKILL OR NOT
-			skill = (sent_with_parsed_tags[begin][0][0] in skills)
+			category = words.get(sent_with_parsed_tags[begin][0][0], 0)
 
 			j = begin
 
@@ -105,7 +101,7 @@ def get_phrases(cv_path, skill_path):
 				j += 1
 				if (j >= len(sent_with_parsed_tags)) \
 					or (sent_with_parsed_tags[j][1] != 'PHRASE') \
-					or (skill != (sent_with_parsed_tags[j][0][0] in skills)):
+					or (category != words.get(sent_with_parsed_tags[begin][0][0], 0)):
 					break
 
 			# GET PRE-PHASE CONTEXT
@@ -129,7 +125,7 @@ def get_phrases(cv_path, skill_path):
 			while i < j:
 				phrase.append(sent_with_parsed_tags[i][0][0])
 				i += 1
-			new_phrase = Phrase(pre_phrase_context, phrase, post_phrase_context, skill)
+			new_phrase = Phrase(pre_phrase_context, phrase, post_phrase_context, category)
 			sent_phrases.append(new_phrase)
 
 			# Moving on...
@@ -139,7 +135,13 @@ def get_phrases(cv_path, skill_path):
 
 
 def main():
-	cv_phrases = get_phrases('cv_extracted/cvs/1_cv.txt', 'cv_extracted/skills/1_skills.txt')
+	categories = dict()
+
+	sentences_skills = dc_mgmt.file_to_tokens('cv_extracted/skills/1_skills.txt')
+	for sentence in sentences_skills:
+		for word in sentence:
+			categories[word] = 1
+	cv_phrases = get_phrases('cv_extracted/cvs/1_cv.txt', categories)
 	print(cv_phrases)
 
 
