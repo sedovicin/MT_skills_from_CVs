@@ -45,14 +45,14 @@ class Phrase:
 	"""
 	Structure for holding phrase along with its context and skill category.
 	"""
-	def __init__(self, pre_phrase_context, phrase, post_phrase_context, skill):
+	def __init__(self, pre_phrase_context, phrase, post_phrase_context, category):
 		self.pre_phrase_context = pre_phrase_context
 		self.phrase = phrase
 		self.post_phrase_context = post_phrase_context
-		self.skill = skill
+		self.category = category
 
 	def str(self):
-		return "(%s; %s; %s; %s)" % (self.pre_phrase_context, self.phrase, self.post_phrase_context, self.skill)
+		return "(%s; %s; %s; %s)" % (self.pre_phrase_context, self.phrase, self.post_phrase_context, self.category)
 
 	def __str__(self):
 		return self.str()
@@ -133,6 +133,21 @@ def get_phrases(cv_path, words):
 			i = j
 		cv_phrases.append(sent_phrases)
 	return cv_phrases
+
+def create_sets(start, end):
+	"""
+	Creates sets from files and exports them to files
+	"""
+	all_phrases = list()
+	for i in range(start, end):
+		categories = dict()
+
+		sentences_skills = dc_mgmt.file_to_tokens('cv_extracted/skills/%s_skills.txt' % (i+1))
+		for sentence in sentences_skills:
+			for word in sentence:
+				categories[word] = 1
+		cv_phrases = get_phrases('cv_extracted/cvs/%s_cv.txt' % (i+1), categories)
+		all_phrases.extend(cv_phrases)
 
 
 def main():
