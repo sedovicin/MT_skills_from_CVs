@@ -77,6 +77,7 @@ def get_phrases(cv_path, words):
 	parser = PhraseParser()
 	parsed_sents = parser.parse_sents(tags)
 
+	#TODO: try with ignoring punctuation
 	cv_phrases = list()
 	for sentence in parsed_sents:
 		sent_phrases = list()
