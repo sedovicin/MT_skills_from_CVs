@@ -1,6 +1,5 @@
 import dataset_corpus_mgmt as dc_mgmt
 import POSTagger
-import TextFromFileExtractor
 import nltk
 from nltk.tree import Tree
 
@@ -43,6 +42,9 @@ class PhraseParser:
 
 
 class Phrase:
+	"""
+	Structure for holding phrase along with its context and skill category.
+	"""
 	def __init__(self, pre_phrase_context, phrase, post_phrase_context, skill):
 		self.pre_phrase_context = pre_phrase_context
 		self.phrase = phrase
@@ -59,98 +61,87 @@ class Phrase:
 		return self.str()
 
 
-sentences_cv = dc_mgmt.file_to_tokens('cv_extracted/cvs/1_cv.txt')
-tags = POSTagger.tag_pos_sentences(sentences_cv)
-parser = PhraseParser()
-parsed_sents = parser.parse_sents(tags)
+def get_phrases(cv_path, skill_path):
+	"""
+	Extracts phrases from file containing CV.
+	Requires file that contains skill words.
+	:param cv_path:
+	:param skill_path:
+	:return:
+	"""
+	cv_sentences = dc_mgmt.file_to_tokens(cv_path)
+	tags = POSTagger.tag_pos_sentences(cv_sentences)
+	parser = PhraseParser()
+	parsed_sents = parser.parse_sents(tags)
 
-sentences_skills = dc_mgmt.file_to_tokens('cv_extracted/skills/1_skills.txt')
-skills_dict = dict()
-for sentence in sentences_skills:
-	for word in sentence:
-		skills_dict[word] = 1
-skills = list(skills_dict.keys())
+	sentences_skills = dc_mgmt.file_to_tokens(skill_path)
+	skills_dict = dict()
+	for sentence in sentences_skills:
+		for word in sentence:
+			skills_dict[word] = 1
+	skills = list(skills_dict.keys())
 
-for sentence in parsed_sents:
-	phrases = list()
-	i = 0
-	sent_with_parsed_tags = sentence.pos()
+	cv_phrases = list()
+	for sentence in parsed_sents:
+		sent_phrases = list()
+		i = 0
+		sent_with_parsed_tags = sentence.pos()
 
-	while i < len(sent_with_parsed_tags):
-		# FIND NEXT PHRASE INDEX
-		begin = i
-		while (begin < len(sent_with_parsed_tags)) and (sent_with_parsed_tags[begin][1] != 'PHRASE'):
-			begin += 1
-		if begin >= len(sent_with_parsed_tags):
-			break
-
-		# GET IF FIRST WORD OF PHRASE IS SKILL OR NOT
-		skill = (sent_with_parsed_tags[begin][0][0] in skills)
-
-		j = begin
-
-		# FIND END OF PHRASE
-		while True:
-			j += 1
-			if (j >= len(sent_with_parsed_tags)) \
-				or (sent_with_parsed_tags[j][1] != 'PHRASE') \
-				or (skill != (sent_with_parsed_tags[j][0][0] in skills)):
+		while i < len(sent_with_parsed_tags):
+			# FIND NEXT PHRASE INDEX
+			begin = i
+			while (begin < len(sent_with_parsed_tags)) and (sent_with_parsed_tags[begin][1] != 'PHRASE'):
+				begin += 1
+			if begin >= len(sent_with_parsed_tags):
 				break
 
-		# GET PRE-PHASE CONTEXT
-		pre_phrase_context = list()
-		i = begin - 1
-		while (i >= 0) and ((begin - i) <= 3):
-			pre_phrase_context.append(sent_with_parsed_tags[i][0][0])
-			i -= 1
-		pre_phrase_context.reverse()
+			# GET IF FIRST WORD OF PHRASE IS SKILL OR NOT
+			skill = (sent_with_parsed_tags[begin][0][0] in skills)
 
-		# GET POST-PHASE CONTEXT
-		post_phrase_context = list()
-		i = j
-		while (i < len(sent_with_parsed_tags)) and ((i - j) < 3):
-			post_phrase_context.append(sent_with_parsed_tags[i][0][0])
-			i += 1
+			j = begin
 
-		# GET PHRASE
-		phrase = list()
-		i = begin
-		while i < j:
-			phrase.append(sent_with_parsed_tags[i][0][0])
-			i += 1
-		new_phrase = Phrase(pre_phrase_context, phrase, post_phrase_context, skill)
-		phrases.append(new_phrase)
+			# FIND END OF PHRASE
+			while True:
+				j += 1
+				if (j >= len(sent_with_parsed_tags)) \
+					or (sent_with_parsed_tags[j][1] != 'PHRASE') \
+					or (skill != (sent_with_parsed_tags[j][0][0] in skills)):
+					break
 
-		# Moving on...
-		i = j
+			# GET PRE-PHASE CONTEXT
+			pre_phrase_context = list()
+			i = begin - 1
+			while (i >= 0) and ((begin - i) <= 3):
+				pre_phrase_context.append(sent_with_parsed_tags[i][0][0])
+				i -= 1
+			pre_phrase_context.reverse()
 
+			# GET POST-PHASE CONTEXT
+			post_phrase_context = list()
+			i = j
+			while (i < len(sent_with_parsed_tags)) and ((i - j) < 3):
+				post_phrase_context.append(sent_with_parsed_tags[i][0][0])
+				i += 1
 
+			# GET PHRASE
+			phrase = list()
+			i = begin
+			while i < j:
+				phrase.append(sent_with_parsed_tags[i][0][0])
+				i += 1
+			new_phrase = Phrase(pre_phrase_context, phrase, post_phrase_context, skill)
+			sent_phrases.append(new_phrase)
 
-def check_next(sent_with_parsed_tags, skills, curr_index, curr_skill):
-	if (sent_with_parsed_tags[curr_index+1][1] == 'PHRASE'):
-		if sent_with_parsed_tags[curr_index+1][0][0] in skills:
-			skill = True
-		else:
-			skill = False
-		if curr_skill == skill:
-			check_next(sent_with_parsed_tags, skills, curr_index+1, curr_skill)
-
-
-	# break
-
-# for i in range(1000):
-# 	sents = dc_mgmt.file_to_tokens('cv_extracted/skills/%s_skills.txt' %str(i+1))
-# 	tags = POSTagger.tag_pos_sentences(sents)
-# 	parser = PhraseParser()
-# 	parsed = parser.parse_sents(tags)
-#
-# 	for sent in parsed:
-#
-# 		# a = sent.subtrees(lambda t: t.label() == 'S')
-# 		# for subtree in a:
-# 		# 	print(subtree.leaves())
-# 		for subt in sent.pos():
-# 			print(subt)
-# 		print("")
+			# Moving on...
+			i = j
+		cv_phrases.append(sent_phrases)
+	return cv_phrases
 
 
+def main():
+	cv_phrases = get_phrases('cv_extracted/cvs/1_cv.txt', 'cv_extracted/skills/1_skills.txt')
+	print(cv_phrases)
+
+
+if __name__ == "__main__":
+	main()
