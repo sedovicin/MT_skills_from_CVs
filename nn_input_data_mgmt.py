@@ -38,7 +38,7 @@ class PhraseParser:
 		:return: Parsed sentence as list of trees
 		:rtype: list[Tree]
 		"""
-		sentences_parsed = list()
+		sentences_parsed = []
 		for sentence in tagged_sentences:
 			sentences_parsed.append(self.parse(sentence))
 		return sentences_parsed
@@ -46,7 +46,7 @@ class PhraseParser:
 
 class SampleGenerator:
 	def __init__(self, corpus_path, dataset_path):
-		self.vectorizator = vectorizators.get_word2vec(word2vec_path='word2vec.obj', corpus_path=corpus_path)
+		self.vectorizator = vectorizators.Word2VecVectorizator()
 		self.parser = PhraseParser()
 
 	def get_batch_x_y(self, begin, end):
@@ -62,84 +62,80 @@ class SampleGenerator:
 		ys = []
 		for i in range(begin, end):
 			cv_sentences = dc_mgmt.file_to_tokens('cv_extracted/cvs/%s_cv.txt' % i)
-			tags = POSTagger.tag_pos_sentences(cv_sentences)
-			parsed_sents = self.parser.parse_sents(tags)
 
-			categories = dict()
+			categories = {}
 			sentences_skills = dc_mgmt.file_to_tokens('cv_extracted/skills/%s_skills.txt' % i)
 			for sentence in sentences_skills:
 				for word in sentence:
 					categories[word] = 1
 
-			for sentence in parsed_sents:
-				pre_context, phrase, post_context, y = self.phrases_context_as_vectors(sentence, categories)
+			for sentence in cv_sentences:
+				tag_sentence = POSTagger.tag_pos(sentence)
+				parsed_sentence = self.parser.parse(tag_sentence)
+
+				vectors = self.vectorizator.get_vectors(sentence)
+
+				pre_context, phrase, post_context, y = \
+					self.phrases_context_as_vectors(parsed_sentence, vectors, categories)
 				pre_contexts.extend(pre_context)
 				phrases.extend(phrase)
 				post_contexts.extend(post_context)
 				ys.extend(y)
 		return np.array(pre_contexts), np.array(phrases), np.array(post_contexts), np.array(ys)
 
-	def phrases_context_as_vectors(self, sentence, words):
-		i = 0
+	@staticmethod
+	def phrases_context_as_vectors(sentence, vectors, categories):
+		index = 0  # pointer to word that is being currently processed throughout the code
+		begin = 0  # pointer to beginning of matching phrase
+		end = 1  # pointer to word following the end of matching phrase,
 		pre_contexts = []
 		phrases = []
 		post_contexts = []
 		ys = []
 		sent_with_parsed_tags = sentence.pos()
-		while i < len(sent_with_parsed_tags):
+
+		while begin < len(sent_with_parsed_tags):
 			# FIND NEXT PHRASE INDEX
-			begin = i
-			while (begin < len(sent_with_parsed_tags)) and (sent_with_parsed_tags[begin][1] != 'PHRASE'):
-				begin += 1
-			if begin >= len(sent_with_parsed_tags):
+			index = begin
+			while (index < len(sent_with_parsed_tags)) and (sent_with_parsed_tags[index][1] != 'PHRASE'):
+				index += 1
+			if index >= len(sent_with_parsed_tags):
 				break
+			begin = index
 
-			# GET IF FIRST WORD OF PHRASE IS SKILL OR NOT
-			category = words.get(sent_with_parsed_tags[begin][0][0], 0)
-
-			j = begin
+			# GET CATEGORY OF FIRST WORD IN PHRASE
+			category = categories.get(sent_with_parsed_tags[begin][0][0], 0)
 
 			# FIND END OF PHRASE
 			while True:
-				j += 1
-				if (j >= len(sent_with_parsed_tags)) \
-					or (sent_with_parsed_tags[j][1] != 'PHRASE') \
-					or (category != words.get(sent_with_parsed_tags[begin][0][0], 0)):
+				index += 1
+				if (index >= len(sent_with_parsed_tags)) \
+					or (sent_with_parsed_tags[index][1] != 'PHRASE') \
+					or (category != categories.get(sent_with_parsed_tags[begin][0][0], 0)):
 					break
+			end = index
 
 			# GET PRE-PHASE CONTEXT
-			pre_phrase_context = list()
-			i = begin - 1
-			while (i >= 0) and ((begin - i) <= 3):
-				try:
-					pre_phrase_context.append(self.vectorizator.wv.get_vector(sent_with_parsed_tags[i][0][0]))
-				except KeyError:
-					pre_phrase_context.append(np.zeros(self.vectorizator.wv.vector_size))
-				# TODO: generate vector!
-				i -= 1
+			pre_phrase_context = []
+			index = begin - 1
+			while (index >= 0) and ((begin - index) <= 3):
+				pre_phrase_context.append(vectors[index])
+				index -= 1
 			pre_phrase_context.reverse()
 
 			# GET POST-PHASE CONTEXT
-			post_phrase_context = list()
-			i = j
-			while (i < len(sent_with_parsed_tags)) and ((i - j) < 3):
-				try:
-					post_phrase_context.append(self.vectorizator.wv.get_vector(sent_with_parsed_tags[i][0][0]))
-				except KeyError:
-					post_phrase_context.append(np.zeros(self.vectorizator.wv.vector_size))
-				# TODO: generate vector!
-				i += 1
+			post_phrase_context = []
+			index = end
+			while (index < len(sent_with_parsed_tags)) and ((index - end) < 3):
+				post_phrase_context.append(vectors[index])
+				index += 1
 
 			# GET PHRASE
-			phrase = list()
-			i = begin
-			while i < j:
-				try:
-					phrase.append(self.vectorizator.wv.get_vector(sent_with_parsed_tags[i][0][0]))
-				except KeyError:
-					phrase.append(np.zeros(self.vectorizator.wv.vector_size))
-				# TODO: generate vector!
-				i += 1
+			phrase = []
+			index = begin
+			while index < end:
+				phrase.append(vectors[index])
+				index += 1
 
 			pre_contexts.append(np.array(pre_phrase_context))
 			phrases.append(np.array(phrase))
@@ -150,7 +146,7 @@ class SampleGenerator:
 			ys.append(y_entry)
 
 			# Moving on...
-			i = j
+			begin = end
 		return pre_contexts, phrases, post_contexts, ys
 
 

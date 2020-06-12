@@ -47,7 +47,7 @@ class Word2VecVectorizator:
 		self.additional_vector_set = dict()
 
 	@staticmethod
-	def __get_word2vec(self, word2vec_path=None, corpus_path=None):
+	def __get_word2vec(word2vec_path=None, corpus_path=None):
 		"""
 		Loads pickled Word2Vec model from path. If the file doesn't exist, creates a new trained one using given corpus.
 		If the corpus is None, uses default corpus (Gutenberg).
