@@ -93,7 +93,7 @@ class Word2VecVectorizator:
 		"""
 		Gets vector for each word in sentence. If vector for word does not exist,
 		creates one based on the context of sentence.
-		:param sentence:
+		:param sentence: sentence to be processed
 		:return: array of vectors
 		"""
 		vectors = np.zeros((len(sentence), self.word2vec.wv.vector_size))
@@ -110,6 +110,23 @@ class Word2VecVectorizator:
 			vectors[index] = vector
 			index += 1
 		return vectors
+
+	def get_empty_vector(self):
+		"""
+
+		:return: empty vector (all zero-value).
+		:rtype: numpy.ndarray
+		"""
+		return np.zeros(self.word2vec.wv.vector_size)
+
+	def get_empty_vector_array(self, array_size):
+		"""
+
+		:param array_size: number of rows
+		:return: empty array of vectors (all zero-value).
+		:rtype: numpy.ndarray
+		"""
+		return np.zeros((array_size, self.word2vec.wv.vector_size))
 
 	def create_vector_for_oov_word(self, sentence, index):
 		"""
