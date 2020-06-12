@@ -110,7 +110,7 @@ class PhraseContextCategorisator():
 		:return:
 		"""
 		generator = nn_mgmt.SampleGenerator(corpus_path='corpus_train.json', dataset_path='dataset_train.json')
-		for i in range(1, 10001, batch_size):
+		for i in range(1, 1001, batch_size):
 			print("Training from %s to %s..." %(i, i+batch_size))
 			pre, phr, post, y = generator.get_batch_x_y(i, i+batch_size)
 			pre = pad_sequences(pre)
@@ -118,9 +118,21 @@ class PhraseContextCategorisator():
 			post = pad_sequences(post)
 			self.model.train_on_batch(x=[pre, phr, post], y=y)
 
+	def evaluate(self, batch_size):
+		generator = nn_mgmt.SampleGenerator(corpus_path='corpus_train.json', dataset_path='dataset_train.json')
+		for i in range(1001, 1101, batch_size):
+			print("Training from %s to %s..." % (i, i + batch_size))
+			pre, phr, post, y = generator.get_batch_x_y(i, i + batch_size)
+			pre = pad_sequences(pre)
+			phr = pad_sequences(phr)
+			post = pad_sequences(post)
+			print(self.model.evaluate(x=[pre, phr, post], y=y, verbose=0))
+
+
 def main():
 	categorisator = PhraseContextCategorisator(100)
 	categorisator.train(50)
+	categorisator.evaluate(50)
 
 
 if __name__ == "__main__":

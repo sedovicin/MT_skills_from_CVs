@@ -166,10 +166,10 @@ class SampleGenerator:
 		:param end:
 		:return:
 		"""
-		pre_contexts = list()
-		phrases = list()
-		post_contexts = list()
-		ys = list()
+		pre_contexts = []
+		phrases = []
+		post_contexts = []
+		ys = []
 		for i in range(begin, end):
 			cv_sentences = dc_mgmt.file_to_tokens('cv_extracted/cvs/%s_cv.txt' % i)
 			tags = POSTagger.tag_pos_sentences(cv_sentences)
@@ -191,10 +191,10 @@ class SampleGenerator:
 
 	def phrases_context_as_vectors(self, sentence, words):
 		i = 0
-		pre_contexts = list()
-		phrases = list()
-		post_contexts = list()
-		ys = list()
+		pre_contexts = []
+		phrases = []
+		post_contexts = []
+		ys = []
 		sent_with_parsed_tags = sentence.pos()
 		while i < len(sent_with_parsed_tags):
 			# FIND NEXT PHRASE INDEX
