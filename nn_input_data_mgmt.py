@@ -65,6 +65,9 @@ class SampleGenerator:
 		pre_contexts = []
 		phrases = []
 		post_contexts = []
+		pre_contexts_words = []
+		phrases_words = []
+		post_contexts_words = []
 		ys = []
 		for i in range(begin, end):
 			cv_sentences = dc_mgmt.file_to_tokens('cv_extracted/cvs/%s_cv.txt' % i)
@@ -81,13 +84,17 @@ class SampleGenerator:
 
 				vectors = self.vectorizator.get_vectors(sentence)
 
-				pre_context, phrase, post_context, y = \
+				pre_context, phrase, post_context, y, pre_word, phr_word, post_word = \
 					self.phrases_context_as_vectors(parsed_sentence, vectors, categories)
 				pre_contexts.extend(pre_context)
 				phrases.extend(phrase)
 				post_contexts.extend(post_context)
+				pre_contexts_words.extend(pre_word)
+				phrases_words.extend(phr_word)
+				post_contexts_words.extend(post_word)
 				ys.extend(y)
-		return np.array(pre_contexts), np.array(phrases), np.array(post_contexts), np.array(ys)
+		return np.array(pre_contexts), np.array(phrases), np.array(post_contexts), np.array(ys), \
+			   pre_contexts_words, phrases_words, post_contexts_words
 
 	def phrases_context_as_vectors(self, sentence, vectors, categories):
 		"""
@@ -106,6 +113,11 @@ class SampleGenerator:
 		pre_contexts = []
 		phrases = []
 		post_contexts = []
+
+		pre_contexts_words = []
+		phrases_words = []
+		post_contexts_words = []
+
 		ys = []
 		sent_with_parsed_tags = sentence.pos()
 		word_count = len(sent_with_parsed_tags)
@@ -134,27 +146,37 @@ class SampleGenerator:
 			# GET PRE-PHASE CONTEXT
 			index = begin - self.context_size
 			pre_phrase_context = self.vectorizator.get_empty_vector_array(self.context_size)
+			pre_phr_cont_word = []
 			while index < begin:
 				if index >= 0:
 					pre_phrase_context[index - begin + self.context_size] = vectors[index]
+					pre_phr_cont_word.append(sent_with_parsed_tags[index][0][0])
 				index += 1
 
 			# GET PHRASE
 			phrase = self.vectorizator.get_empty_vector_array(end - begin)
+			phr_word = []
 			while index < end:
 				phrase[index - begin] = vectors[index]
+				phr_word.append(sent_with_parsed_tags[index][0][0])
 				index += 1
 
 			# GET POST-PHASE CONTEXT
 			post_phrase_context = self.vectorizator.get_empty_vector_array(self.context_size)
+			post_phr_cont_word = []
 			while index < (end + self.context_size):
 				if index < word_count:
 					pre_phrase_context[index - end] = vectors[index]
+					post_phr_cont_word.append(sent_with_parsed_tags[index][0][0])
 				index += 1
 
 			pre_contexts.append(pre_phrase_context)
 			phrases.append(phrase)
 			post_contexts.append(post_phrase_context)
+
+			pre_contexts_words.append(pre_phr_cont_word)
+			phrases_words.append(phr_word)
+			post_contexts_words.append(post_phr_cont_word)
 
 			y_entry = np.zeros(self.categories_count)
 			y_entry[category] = 1
@@ -162,7 +184,7 @@ class SampleGenerator:
 
 			# Moving on...
 			begin = end
-		return pre_contexts, phrases, post_contexts, ys
+		return pre_contexts, phrases, post_contexts, ys, pre_contexts_words, phrases_words, post_contexts_words
 
 
 def main():

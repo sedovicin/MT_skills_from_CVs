@@ -1,16 +1,21 @@
 from keras.layers import Input, Dense, LSTM, concatenate, Masking
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.preprocessing.sequence import pad_sequences
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 import nn_input_data_mgmt as nn_mgmt
 
 
 class PhraseContextCategorisator:
-	def __init__(self, vector_size):
+	def __init__(self, vector_size, model=None):
 		self.vector_size = vector_size
-		self.model = self.__create_model()
+		if model is None:
+			self.model = self.__create_model()
+		else:
+			self.model = load_model(model)
 		print(self.model.summary())
 		self.generator = nn_mgmt.SampleGenerator(context_size=3, categories_count=2)
+
 
 	def __create_model(self):
 		model_input1 = Input(shape=(None, self.vector_size))
@@ -47,26 +52,85 @@ class PhraseContextCategorisator:
 		:param batch_size: amount of files to be processed in batch
 		:return:
 		"""
-		for i in range(1, 101, batch_size):
+		for i in range(1, 10001, batch_size):
 			print("Training from %s to %s..." % (i, i+batch_size))
 			pre, phr, post, y = self.generator.get_batch_x_y(i, i+batch_size)
 			phr = pad_sequences(phr, dtype='float32')
 			self.model.train_on_batch(x=[pre, phr, post], y=y)
-			break
+		# self.model.save('cv_model')
 
 	def evaluate(self, batch_size):
 
-		for i in range(101, 151, batch_size):
+		for i in range(10001, 10501, batch_size):
 			print("Evaluating from %s to %s..." % (i, i + batch_size))
-			pre, phr, post, y = self.generator.get_batch_x_y(i, i + batch_size)
+			pre, phr, post, y, pre_word, phr_word, post_word = self.generator.get_batch_x_y(i, i + batch_size)
 			phr = pad_sequences(phr, dtype='float32')
 			print(self.model.evaluate(x=[pre, phr, post], y=y, verbose=0))
 
+	def predict(self, mark):
+		print("Predicting %s..." % mark)
+		pre, phr, post, y, pre_word, phr_word, post_word = self.generator.get_batch_x_y(mark, mark+1)
+		phr = pad_sequences(phr, dtype='float32')
+		result = self.model.predict(x=[pre, phr, post], verbose=0)
+		return pre_word, phr_word, post_word, y, result
+
 
 def main():
-	categorisator = PhraseContextCategorisator(100)
-	categorisator.train(50)
-	categorisator.evaluate(50)
+	# categorisator = PhraseContextCategorisator(100)
+	# categorisator.train(5)
+	import numpy as np
+	y = []
+	result = []
+	categorisator = PhraseContextCategorisator(100, 'cv_model')
+	# for i in range(10001, 10595):
+	# 	phrase_org, y_org, result_org = categorisator.predict(i)
+	# 	y.extend(y_org)
+	# 	result.extend(result_org)
+	#
+	#
+	# for line in result:
+	# 	line[0] = int(round(line[0]))
+	# 	line[1] = int(round(line[1]))
+	#
+	# y = np.array(y)
+	# # print(result)
+	# y = y[:, 1]
+	# # print(y)
+	# # print("a")
+	# result = np.array(result)
+	# result = result[:, 1]
+	# print(accuracy_score(y, result))
+	# print(precision_score(y, result))
+	# print(recall_score(y, result))
+	# print(f1_score(y, result))
+	# print("UKUPNO %s PRIMJERA" %len(y))
+
+	pre, phr, post, y, result = categorisator.predict(10600)
+
+	for i in range(len(pre)):
+		print("	%s & %s & %s & %s & %s \\\\" % (pre[i], phr[i], post[i], y[i], result[i]))
+		print("\\hline")
+
+	for line in result:
+		line[0] = int(round(line[0]))
+		line[1] = int(round(line[1]))
+
+	y = np.array(y)
+	# print(result)
+	y = y[:, 1]
+	# print(y)
+	# print("a")
+	result = np.array(result)
+	result = result[:, 1]
+	print(accuracy_score(y, result))
+	print(precision_score(y, result))
+	print(recall_score(y, result))
+	print(f1_score(y, result))
+	print("UKUPNO %s PRIMJERA" %len(y))
+
+
+
+# categorisator.evaluate(25)
 
 
 if __name__ == "__main__":
